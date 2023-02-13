@@ -17,6 +17,8 @@ public class Immortal extends Thread {
 
     private final Random r = new Random(System.currentTimeMillis());
 
+    private boolean estaSuspendido = false;
+
 
     public Immortal(String name, List<Immortal> immortalsPopulation, int health, int defaultDamageValue, ImmortalUpdateReportCallback ucb) {
         super(name);
@@ -32,18 +34,28 @@ public class Immortal extends Thread {
         while (true) {
             Immortal im;
 
-            int myIndex = immortalsPopulation.indexOf(this);
+            suspendido();
+            synchronized (immortalsPopulation) {
 
-            int nextFighterIndex = r.nextInt(immortalsPopulation.size());
+                int myIndex = immortalsPopulation.indexOf(this);
 
-            //avoid self-fight
-            if (nextFighterIndex == myIndex) {
-                nextFighterIndex = ((nextFighterIndex + 1) % immortalsPopulation.size());
+                int nextFighterIndex = r.nextInt(immortalsPopulation.size());
+
+                //avoid self-fight
+                if (nextFighterIndex == myIndex) {
+                    nextFighterIndex = ((nextFighterIndex + 1) % immortalsPopulation.size());
+                }
+
+                im = immortalsPopulation.get(nextFighterIndex);
+
+                if (this.health > 0){
+                    this.fight(im);
+                } else if (myIndex != -1){
+                    immortalsPopulation.remove(myIndex);
+                }
+
             }
 
-            im = immortalsPopulation.get(nextFighterIndex);
-
-            this.fight(im);
 
             try {
                 Thread.sleep(1);
@@ -55,14 +67,28 @@ public class Immortal extends Thread {
 
     }
 
-    public void fight(Immortal i2) {
+    private synchronized void suspendido()  {
+        while(estaSuspendido) {
 
-        if (i2.getHealth() > 0) {
-            i2.changeHealth(i2.getHealth() - defaultDamageValue);
-            this.health += defaultDamageValue;
-            updateCallback.processReport("Fight: " + this + " vs " + i2+"\n");
-        } else {
-            updateCallback.processReport(this + " says:" + i2 + " is already dead!\n");
+            try {
+                wait();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    public void fight(Immortal i2) {
+        // cc
+        synchronized (i2){
+
+            if (i2.getHealth() > 0) {
+                i2.changeHealth(i2.getHealth() - defaultDamageValue);
+                this.health += defaultDamageValue;
+                updateCallback.processReport("Fight: " + this + " vs " + i2+"\n");
+            } else {
+                updateCallback.processReport(this + " says:" + i2 + " is already dead!\n");
+            }
         }
 
     }
@@ -81,4 +107,16 @@ public class Immortal extends Thread {
         return name + "[" + health + "]";
     }
 
+    public void suspender() {
+        estaSuspendido = true;
+    }
+
+    public synchronized void resumir() {
+        estaSuspendido = false;
+        notifyAll();
+    }
+
+    public void parar() {
+        stop();
+    }
 }
