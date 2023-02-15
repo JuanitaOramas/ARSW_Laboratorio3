@@ -1,0 +1,9 @@
+Posibles condiciones de carrera
+* Si varias serpientes acceden al tiempo a una celda con un item como: ratón, rayo, etc.
+
+Uso inadecuado de colecciones, considerando su manejo concurrente (para esto, aumente la velocidad del juego y ejecútelo varias veces hasta que se genere un error).
+* Al aumentar la velocidad genera en ocasiones el error ConcurrentModificationException dado que las serpientes intentan acceder al mismo item (ratón, rayo, etc).
+
+
+Uso innecesario de esperas activas.
+* pregunta innecesariamente si esta muerta la serpiente
